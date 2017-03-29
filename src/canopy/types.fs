@@ -1,8 +1,11 @@
+[<AutoOpen>]
 module canopy.types
 
 open System
 open OpenQA.Selenium
 open Microsoft.FSharp.Reflection
+
+let mutable (browser : IWebDriver) = null
 
 type CanopyException(message) = inherit Exception(message)
 type CanopyReadOnlyException(message) = inherit CanopyException(message)
@@ -17,6 +20,7 @@ type CanopyNotEqualsFailedException(message) = inherit CanopyException(message)
 type CanopyValueNotInListException(message) = inherit CanopyException(message)
 type CanopyValueInListException(message) = inherit CanopyException(message)
 type CanopyContainsFailedException(message) = inherit CanopyException(message)
+type CanopyNotContainsFailedException(message) = inherit CanopyException(message)
 type CanopyCountException(message) = inherit CanopyException(message)
 type CanopyDisplayedFailedException(message) = inherit CanopyException(message)
 type CanopyNotDisplayedFailedException(message) = inherit CanopyException(message)
@@ -26,6 +30,8 @@ type CanopyNotStringOrElementException(message) = inherit CanopyException(messag
 type CanopyOnException(message) = inherit CanopyException(message)
 type CanopyCheckFailedException(message) = inherit CanopyException(message)
 type CanopyUncheckFailedException(message) = inherit CanopyException(message)
+type CanopyReadException(message) = inherit CanopyException(message)
+type CanopySkipTestException() = inherit CanopyException(String.Empty)
 
 //directions
 type direction =
@@ -39,18 +45,24 @@ type BrowserStartMode =
     | FirefoxWithProfile of Firefox.FirefoxProfile
     | FirefoxWithPath of string
     | FirefoxWithUserAgent of string
+    | FirefoxWithPathAndTimeSpan of string * TimeSpan
+    | FirefoxWithProfileAndTimeSpan of Firefox.FirefoxProfile * TimeSpan
     | IE
     | IEWithOptions of IE.InternetExplorerOptions
     | IEWithOptionsAndTimeSpan of IE.InternetExplorerOptions * TimeSpan
+    | EdgeBETA
     | Chrome
     | ChromeWithOptions of Chrome.ChromeOptions
     | ChromeWithOptionsAndTimeSpan of Chrome.ChromeOptions * TimeSpan
     | ChromeWithUserAgent of string
+    | Chromium
+    | ChromiumWithOptions of Chrome.ChromeOptions
+    | Safari
     | PhantomJS
     | PhantomJSProxyNone
     | Remote of string * ICapabilities
-  
-let toString (x:'a) = 
+
+let toString (x:'a) =
     match FSharpValue.GetUnionFields(x, typeof<'a>) with
     | case, _ -> case.Name
 
@@ -67,9 +79,20 @@ type suite () = class
     member val Before = fun () -> () with get, set
     member val After = fun () -> () with get, set
     member val Lastly = fun () -> () with get, set
+    member val OnPass = fun () -> () with get, set
+    member val OnFail = fun () -> () with get, set
     member val Tests : Test list = [] with get, set
     member val Wips : Test list = [] with get, set
     member val Manys : Test list = [] with get, set
     member val Always : Test list = [] with get, set
     member val IsParallel = false with get, set
+    member this.Clone() = this.MemberwiseClone() :?> suite
 end
+
+type Result =
+    | Pass
+    | Fail of Exception
+    | Skip
+    | Todo
+    | FailFast
+    | Failed

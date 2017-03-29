@@ -1,4 +1,4 @@
-﻿// --------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------
 // FAKE build script 
 // --------------------------------------------------------------------------------------
 #r @"packages/FAKE/tools/FakeLib.dll"
@@ -66,9 +66,7 @@ Target "AssemblyInfo" (fun _ ->
 )
 
 // --------------------------------------------------------------------------------------
-// Clean build results & restore NuGet packages
-
-Target "RestorePackages" RestorePackages
+// Clean build results
 
 Target "Clean" (fun _ ->
     CleanDirs ["bin"; "temp"]
@@ -131,23 +129,6 @@ Target "NuGet" (fun _ ->
         ("nuget/" + project + ".nuspec")
 )
 
-Target "NuGet-edge" (fun _ ->
-    NuGet (fun p -> 
-        { p with   
-            Authors = authors
-            Project = project
-            Summary = summary
-            Description = description
-            Version = release.NugetVersion
-            ReleaseNotes = String.Join(Environment.NewLine, release.Notes)
-            Tags = tags
-            OutputPath = "bin"
-            AccessKey = getBuildParamOrDefault "nugetkey" ""
-            Publish = hasBuildParam "nugetkey"
-            Dependencies = [] })
-        ("nuget/" + project + "-edge.nuspec")
-)
-
 // --------------------------------------------------------------------------------------
 // Generate the documentation
 
@@ -178,10 +159,9 @@ Target "Release" DoNothing
 Target "All" DoNothing
 
 "Clean"
-  ==> "RestorePackages"
   ==> "AssemblyInfo"
   ==> "Build"
-  ==> "RunTests"
+  //==> "RunTests"
   ==> "All"
 
 "All" 
@@ -189,7 +169,6 @@ Target "All" DoNothing
   ==> "GenerateDocs"
   ==> "ReleaseDocs"
   ==> "NuGet"
-  ==> "NuGet-edge"
   ==> "Release"
 
 RunTargetOrDefault "All"
